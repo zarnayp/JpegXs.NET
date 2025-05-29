@@ -114,11 +114,11 @@
                     return Result.Fail("Failed"); // TODO: specify what kind of error
                 }
 
-                enc_output.bitstream.used_size;
+                usedSize = enc_output.bitstream.used_size;
 
             }
 
-            return Result.Ok();
+            return Result.Ok(usedSize);
         }
 
         public void Encode(nint input, int width, int height, nint output)
