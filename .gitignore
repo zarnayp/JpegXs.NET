@@ -1,0 +1,6 @@
+src/JpegXs.NET/bin/
+src/JpegXs.NET/obj/
+tests/JpegXs.NET.Tests/bin/
+tests/JpegXs.NET.Tests/obj/
+.vs
+*.cache
