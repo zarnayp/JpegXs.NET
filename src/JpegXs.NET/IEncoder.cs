@@ -10,7 +10,6 @@ namespace JpegXs.NET
     {
         Result Encode(byte[] inputComponent1, byte[] inputComponent2, byte[] inputComponent3, uint width, uint height, byte[] output);
 
-
         void Encode(IntPtr input, int width, int height, IntPtr output);
     }
 }

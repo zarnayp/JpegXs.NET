@@ -17,6 +17,7 @@ namespace JpegXs.NET
         private Result(bool success, uint usedSize, string errorMessage)
         {
             Success = success;
+            UsedSize = usedSize;
             ErrorMessage = errorMessage;
         }
 

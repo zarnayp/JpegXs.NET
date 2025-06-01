@@ -44,6 +44,17 @@ namespace JpegXs.NET.Svt
         CPU_FLAGS_INVALID = 1UL << (sizeof(ulong) * 8 - 1)
     }
 
+    public enum VerboseMessages : uint
+    {
+        VERBOSE_NONE = 0,
+        VERBOSE_ERRORS = 1,
+        VERBOSE_SYSTEM_INFO = 2,
+        VERBOSE_SYSTEM_INFO_ALL = 3,
+        VERBOSE_WARNINGS = 4,
+        VERBOSE_INFO_MULTITHREADING = 5,
+        VERBOSE_INFO_FULL = 6
+    };
+
     public enum SvtJxsErrorType : uint
     {
         SvtJxsErrorNone = 0,
@@ -110,6 +121,29 @@ namespace JpegXs.NET.Svt
 
         // Other settings
         public byte slice_packetization_mode;
+        public IntPtr private_ptr;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct svt_jpeg_xs_decoder_api
+    {
+        public CPU_FLAGS use_cpu_flags;
+        public VerboseMessages verbose;
+        public uint threads_num;
+        public byte packetization_mode;
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        public delegate void callback_send_data_available(IntPtr decoder, IntPtr context);
+
+        public callback_send_data_available callback_send_data_available_func;
+        public IntPtr callback_send_data_available_context;
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        public delegate void callback_get_data_available(IntPtr decoder, IntPtr context);
+
+        public callback_get_data_available callback_get_data_available_func;
+        public IntPtr callback_get_data_available_context;
+
         public IntPtr private_ptr;
     }
 
@@ -205,5 +239,34 @@ namespace JpegXs.NET.Svt
         /// Input user private context pointer, received in output.
         /// </summary>
         public IntPtr user_prv_ctx_ptr;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct svt_jpeg_xs_image_config
+    {
+        const int MAX_COMPONENTS_NUM = 4;
+
+        public uint width;
+        public uint height;
+        public byte bit_depth;
+        public ColourFormat format;
+        public byte components_num;
+
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = MAX_COMPONENTS_NUM)]
+        public Component[] components;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct Component
+    {
+        public uint width;
+        public uint height;
+        public uint byte_size;
+    }
+
+    internal static class SvtConst
+    {
+        public const ulong MajorVersion = 0;
+        public const ulong MinorVersion = 9;
     }
 }

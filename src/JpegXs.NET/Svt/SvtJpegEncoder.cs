@@ -40,8 +40,6 @@
             byte blocking_flag);
 
         private svt_jpeg_xs_encoder_api_t enc;
-        private readonly ulong majorVersion = 0;
-        private readonly ulong minorVersion = 9;
 
         public SvtJpegEncoder()
         {
@@ -51,7 +49,7 @@
         public unsafe Result Encode(byte[] inputComponent1, byte[] inputComponent2, byte[] inputComponent3, uint width, uint height, byte[] output)
         {
             this.enc = new svt_jpeg_xs_encoder_api_t();
-            var error = svt_jpeg_xs_encoder_load_default_parameters(majorVersion, minorVersion, ref this.enc);
+            var error = svt_jpeg_xs_encoder_load_default_parameters(SvtConst.MajorVersion, SvtConst.MinorVersion, ref this.enc);
 
             if(error != SvtJxsErrorType.SvtJxsErrorNone)
             {
@@ -61,11 +59,11 @@
             this.enc.source_width = width;
             this.enc.source_height = height;
             this.enc.input_bit_depth = 8;  // TODO: remove hardcode
-            this.enc.colour_format = ColourFormat.COLOUR_FORMAT_PACKED_YUV444_OR_RGB; // TODO: remove hardcode
-            this.enc.bpp_numerator = 3; // TODO: remove hardcode
+            this.enc.colour_format = ColourFormat.COLOUR_FORMAT_PLANAR_YUV444_OR_RGB; // TODO: remove hardcode
+            this.enc.bpp_numerator = 6; // TODO: remove hardcode
             this.enc.threads_num = 8; // TODO: remove hardcode
 
-            error = svt_jpeg_xs_encoder_init(majorVersion, minorVersion, ref this.enc);
+            error = svt_jpeg_xs_encoder_init(SvtConst.MajorVersion, SvtConst.MinorVersion, ref this.enc);
 
             if (error != SvtJxsErrorType.SvtJxsErrorNone)
             {
