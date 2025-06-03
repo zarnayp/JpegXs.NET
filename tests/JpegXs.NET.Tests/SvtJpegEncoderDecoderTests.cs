@@ -1,3 +1,8 @@
+// Copyright (c) 2025
+// Released under the BSD 2-Clause License.
+// See https://opensource.org/licenses/BSD-2-Clause for details.
+
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using JpegXs.NET.Svt;
@@ -39,10 +44,17 @@ namespace JpegXs.NET.Tests
             }
 
             var encoder = new SvtJpegEncoder();
+            encoder.Initialize((uint)width, (uint)height, 10, 6, Format.PLANAR_YUV444_OR_RGB);
 
             byte[] output = new byte[width * height * 3];
 
+            var sw = Stopwatch.StartNew();
+
             var result = encoder.Encode(red, green, blue, 1024, 764, output);
+
+            sw.Stop();
+
+            Console.WriteLine($"Encoding in {sw.ElapsedMilliseconds} ms");
 
             Assert.IsTrue(result.Success);
 
@@ -55,6 +67,8 @@ namespace JpegXs.NET.Tests
             byte[] blueOut = new byte[height * width];
 
             var decoder = new SvtJpegDecoder();
+
+
 
             decoder.Decode(input, redOut, greenOut, blueOut);
 

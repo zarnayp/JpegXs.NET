@@ -10,10 +10,8 @@ using System.Threading.Tasks;
 
 namespace JpegXs.NET
 {
-    public interface IEncoder
+    public enum Format
     {
-        Result Encode(byte[] inputComponent1, byte[] inputComponent2, byte[] inputComponent3, uint width, uint height, byte[] output);
-
-        void Encode(IntPtr input, int width, int height, IntPtr output);
+        PLANAR_YUV444_OR_RGB
     }
 }

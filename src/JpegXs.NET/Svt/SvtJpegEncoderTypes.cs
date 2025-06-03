@@ -1,4 +1,8 @@
-﻿using System;
+﻿// Copyright (c) 2025
+// Released under the BSD 2-Clause License.
+// See https://opensource.org/licenses/BSD-2-Clause for details.
+
+using System;
 using System.Runtime.InteropServices;
 
 namespace JpegXs.NET.Svt

@@ -1,10 +1,14 @@
-﻿namespace JpegXs.NET
-{
-    using System;
-    using System.Runtime.CompilerServices;
-    using System.Runtime.InteropServices;
-    using JpegXs.NET.Svt;
+﻿// Copyright (c) 2025
+// Released under the BSD 2-Clause License.
+// See https://opensource.org/licenses/BSD-2-Clause for details.
 
+using System;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using JpegXs.NET.Svt;
+
+namespace JpegXs.NET
+{
     internal class SvtJpegEncoder : IEncoder
     {
 
@@ -41,35 +45,41 @@
 
         private svt_jpeg_xs_encoder_api_t enc;
 
-        public SvtJpegEncoder()
+
+        internal SvtJpegEncoder()
         {
         }
 
-
-        public unsafe Result Encode(byte[] inputComponent1, byte[] inputComponent2, byte[] inputComponent3, uint width, uint height, byte[] output)
+        internal InitializeResult Initialize(uint width, uint height, uint numberOfThreads, uint bppNumerator, Format format)
         {
             this.enc = new svt_jpeg_xs_encoder_api_t();
             var error = svt_jpeg_xs_encoder_load_default_parameters(SvtConst.MajorVersion, SvtConst.MinorVersion, ref this.enc);
 
-            if(error != SvtJxsErrorType.SvtJxsErrorNone)
+            if (error != SvtJxsErrorType.SvtJxsErrorNone)
             {
-                return Result.Fail($"Failed to load default parameters: {error.ToString()}");
+                return InitializeResult.Fail($"Failed to load default parameters: {error.ToString()}");
             }
 
             this.enc.source_width = width;
             this.enc.source_height = height;
             this.enc.input_bit_depth = 8;  // TODO: remove hardcode
             this.enc.colour_format = ColourFormat.COLOUR_FORMAT_PLANAR_YUV444_OR_RGB; // TODO: remove hardcode
-            this.enc.bpp_numerator = 6; // TODO: remove hardcode
-            this.enc.threads_num = 8; // TODO: remove hardcode
+            this.enc.bpp_numerator = bppNumerator;
+            this.enc.threads_num = numberOfThreads;
 
             error = svt_jpeg_xs_encoder_init(SvtConst.MajorVersion, SvtConst.MinorVersion, ref this.enc);
 
             if (error != SvtJxsErrorType.SvtJxsErrorNone)
             {
-                return Result.Fail($"Failed to init encoder: {error.ToString()}");
+                return InitializeResult.Fail($"Failed to init encoder: {error.ToString()}");
             }
 
+            return InitializeResult.Ok();
+        }
+
+
+        public unsafe Result Encode(byte[] inputComponent1, byte[] inputComponent2, byte[] inputComponent3, uint width, uint height, byte[] output)
+        {
             uint usedSize = 0;
 
             fixed (byte* ptr1 = inputComponent1, ptr2 = inputComponent2, ptr3 = inputComponent3, ptrOut = output)
@@ -97,11 +107,11 @@
                 enc_input.image = in_buf;
                 enc_input.user_prv_ctx_ptr = IntPtr.Zero;
 
-                error = svt_jpeg_xs_encoder_send_picture(ref this.enc, ref enc_input, 1);
+                var error = svt_jpeg_xs_encoder_send_picture(ref this.enc, ref enc_input, 1);
 
                 if(error != SvtJxsErrorType.SvtJxsErrorNone)
                 {
-                    return Result.Fail("Failed"); // TODO: specify what kind of error
+                    return Result.Fail($"Failed with error: {error.ToString()}"); // TODO: specify what kind of error
                 }
 
                 var enc_output = new svt_jpeg_xs_frame_t();
