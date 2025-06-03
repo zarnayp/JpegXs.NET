@@ -13,5 +13,7 @@ namespace JpegXs.NET
     public interface ISvtEngine
     {
         IEncoder CreateEncoder(uint width, uint height, uint numberOfThreads, uint bppNumerator, Format format);
+
+        IDecoder CreateDecoder();
     }
 }

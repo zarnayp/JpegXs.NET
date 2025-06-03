@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using JpegXs.NET.Svt;
 
 namespace JpegXs.NET
 {
@@ -23,6 +24,12 @@ namespace JpegXs.NET
             }
 
             return encoder;
+        }
+
+        public IDecoder CreateDecoder()
+        {
+            var decoder = new SvtJpegDecoder();
+            return decoder;
         }
     }
 }
