@@ -6,11 +6,33 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using JpegXs.NET.Svt;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace JpegXs.NET.Tests
 {
     public class SvtJpgEncoderDecoderTests
     {
+        private void GetComponentsFromFile(string filePath, int width, int height, out byte[] red, out byte[] green, out byte[] blue)
+        {
+            red = new byte[height * width];
+            green = new byte[height * width];
+            blue = new byte[height * width];
+
+            byte[] rgb = File.ReadAllBytes(filePath);
+
+            int it = 0;
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    red[y * width + x] = rgb[it++];
+                    green[y * width + x] = rgb[it++];
+                    blue[y * width + x] = rgb[it++];
+                }
+            }
+        }
+
         [SetUp]
         public void Setup()
         {
@@ -20,47 +42,39 @@ namespace JpegXs.NET.Tests
         public void SvtJpgEncoderDecoderTest_EncodeDecode()
         {
             // Encode
-            string filePath = "sample.bmp";
+            const int width = 1024;
+            const int height = 768;
 
-            using var bmp = new Bitmap(filePath);
+            byte[] red1, red2;
+            byte[] green1, green2;
+            byte[] blue1, blue2;
 
-            int width = bmp.Width;
-            int height = bmp.Height;
-
-            byte[] red = new byte[height * width];
-            byte[] green = new byte[height * width];
-            byte[] blue = new byte[height * width];
-
-            for (int y = 0; y < height; y++)
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    Color pixel = bmp.GetPixel(x, y);
-
-                    red[y * width + x] = pixel.R;
-                    green[y * width + x] = pixel.G;
-                    blue[y * width + x] = pixel.B;
-                }
-            }
+            GetComponentsFromFile("sampleRGB1.bin", width, height,out red1,out green1,out blue1);
+            GetComponentsFromFile("sampleRGB2.bin", width, height, out red2, out green2, out blue2);
 
             var encoder = new SvtJpegEncoder();
             encoder.Initialize((uint)width, (uint)height, 10, 6, Format.PLANAR_YUV444_OR_RGB);
 
-            byte[] output = new byte[width * height * 3];
+            byte[] output1 = new byte[width * height * 3];
+            byte[] output2 = new byte[width * height * 3];
 
             var sw = Stopwatch.StartNew();
-
-            var result = encoder.Encode(red, green, blue, 1024, 764, output);
-
+            var result = encoder.Encode(red1, green1, blue1, width, height, output1);
             sw.Stop();
+            Console.WriteLine($"Encoding in {sw.ElapsedMilliseconds} ms");
 
+            sw = Stopwatch.StartNew();
+            result = encoder.Encode(red2, green2, blue2, width, height, output2);
+            sw.Stop();
             Console.WriteLine($"Encoding in {sw.ElapsedMilliseconds} ms");
 
             Assert.IsTrue(result.Success);
 
             // Decode
-            byte[] input = new byte[result.UsedSize];
-            Array.Copy(output, 0, input, 0, result.UsedSize);
+            byte[] input1 = new byte[result.UsedSize];
+            Array.Copy(output1, 0, input1, 0, result.UsedSize);
+            byte[] input2 = new byte[result.UsedSize];
+            Array.Copy(output2, 0, input2, 0, result.UsedSize);
 
             byte[] redOut = new byte[height * width];
             byte[] greenOut = new byte[height * width];
@@ -68,9 +82,17 @@ namespace JpegXs.NET.Tests
 
             var decoder = new SvtJpegDecoder();
 
+            sw = Stopwatch.StartNew();
+            decoder.Decode(input1, redOut, greenOut, blueOut);
+            sw.Stop();
+            Console.WriteLine($"First decoding in {sw.ElapsedMilliseconds} ms");
 
+            sw = Stopwatch.StartNew();
+            decoder.Decode(input2, redOut, greenOut, blueOut);
+            sw.Stop();
+            Console.WriteLine($"Second decoding in {sw.ElapsedMilliseconds} ms");
 
-            decoder.Decode(input, redOut, greenOut, blueOut);
+            Assert.IsTrue(result.Success);
 
             Bitmap bitmap = new Bitmap(width, height, PixelFormat.Format24bppRgb);
             BitmapData bitmapData = bitmap.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);

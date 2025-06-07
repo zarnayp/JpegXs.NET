@@ -6,9 +6,11 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace JpegXs.NET.Svt
 {
@@ -50,64 +52,122 @@ namespace JpegXs.NET.Svt
             ref svt_jpeg_xs_frame_t dec_output,
             byte blocking_flag);
 
-        public unsafe void Decode(byte[] input, byte[] outputComponent1, byte[] outputComponent2, byte[] outputComponent3)
+        private svt_jpeg_xs_decoder_api decoder;
+        private svt_jpeg_xs_image_config initializedImageConfig;
+        private bool initialized = false;
+
+        public SvtJpegDecoder()
         {
-            svt_jpeg_xs_decoder_api decoder = new svt_jpeg_xs_decoder_api
+            this.decoder = new svt_jpeg_xs_decoder_api
             {
                 verbose = VerboseMessages.VERBOSE_SYSTEM_INFO,
                 threads_num = 10,
-                use_cpu_flags = CPU_FLAGS.CPU_FLAGS_ALL
+                use_cpu_flags = CPU_FLAGS.CPU_FLAGS_ALL // TODO: remove hardcode
+            };
+        }
+
+        private unsafe SvtJxsErrorType ReadHeader(byte* ptrIn, out uint frameSize, out svt_jpeg_xs_image_config imageConfig)
+        {
+            const int tmpBufferSize = 1000;
+            var ptrTmp = stackalloc byte[tmpBufferSize]; // TODO: do not allocate always
+
+            Buffer.MemoryCopy(ptrIn, ptrTmp, tmpBufferSize, tmpBufferSize);
+
+            frameSize = 0;
+            imageConfig = new svt_jpeg_xs_image_config();
+
+            var initError = svt_jpeg_xs_decoder_get_single_frame_size(
+                (IntPtr)ptrTmp, tmpBufferSize, ref imageConfig, out frameSize, 1);
+
+            if (initError != SvtJxsErrorType.SvtJxsErrorNone)
+            {
+                return initError;
+            }
+
+            return SvtJxsErrorType.SvtJxsErrorNone;
+        }
+
+        private unsafe SvtJxsErrorType Initialize(byte* ptrIn, uint frameSizeIn, out svt_jpeg_xs_image_config imageConfig)
+        {
+            uint frameSize = 0;
+
+            var error = ReadHeader(ptrIn, out frameSize, out imageConfig);
+
+            if (frameSize == 0 || frameSizeIn != frameSize)
+            {
+                this.initializedImageConfig = imageConfig;
+                return SvtJxsErrorType.SvtJxsErrorCorruptFrame;
+            }
+
+            if(imageConfig.height == this.initializedImageConfig.height
+                && imageConfig.height == this.initializedImageConfig.height
+                && imageConfig.width == this.initializedImageConfig.width
+                && imageConfig.bit_depth == this.initializedImageConfig.bit_depth
+                && imageConfig.format == this.initializedImageConfig.format
+                && imageConfig.components_num == this.initializedImageConfig.components_num
+                ) // TODO: is it all what needs to be compared
+            {
+                return SvtJxsErrorType.SvtJxsErrorNone;
+            }
+
+            this.initializedImageConfig = imageConfig;
+
+            var bitstream = new svt_jpeg_xs_bitstream_buffer_t
+            {
+                buffer = (IntPtr)ptrIn,
+                allocation_size = frameSize,
+                used_size = frameSize,
             };
 
+            error = svt_jpeg_xs_decoder_init(
+                SvtConst.MajorVersion, SvtConst.MinorVersion, ref this.decoder, bitstream.buffer, frameSize, ref imageConfig);
+
+            if (error != SvtJxsErrorType.SvtJxsErrorNone)
+            {
+                return error;
+            }
+
+            if (imageConfig.components_num != 3)  // TODO: limited to 3 componets
+            {
+                return error;
+            }
+
+            return SvtJxsErrorType.SvtJxsErrorNone;
+        }
+
+        public void Decode(byte[] input, byte[] outputComponent1, byte[] outputComponent2, byte[] outputComponent3)
+        {
+            DecodeInternal(true, input, outputComponent1, outputComponent2, outputComponent3);
+        }
+
+        // skip header read for better performance
+        public void DecodeSame(byte[] input, byte[] outputComponent1, byte[] outputComponent2, byte[] outputComponent3)
+        {
+            DecodeInternal(false, input, outputComponent1, outputComponent2, outputComponent3);
+        }
+
+        private unsafe void DecodeInternal(bool reinit,byte[] input, byte[] outputComponent1, byte[] outputComponent2, byte[] outputComponent3)
+        {
             fixed (byte* ptrIn = input, ptr1 = outputComponent1, ptr2 = outputComponent2, ptr3 = outputComponent3)
             {
-                // TODO: understand why this 1000 buffer is needed
-                const int tmpBufferSize = 1000;
-                var ptrTmp = stackalloc byte[tmpBufferSize];
-                svt_jpeg_xs_bitstream_buffer_t bitstream = new svt_jpeg_xs_bitstream_buffer_t
+                svt_jpeg_xs_image_config imageConfig;
+
+                if (!this.initialized || reinit)
                 {
-                    allocation_size = tmpBufferSize,
-                    buffer = (IntPtr)ptrTmp,
+                    Initialize(ptrIn, (uint)input.Length, out imageConfig);
+                    initialized = true;
+                }
+                else
+                {
+                    imageConfig = initializedImageConfig;
+                }
+
+                var bitstream = new svt_jpeg_xs_bitstream_buffer_t
+                {
+                    buffer = (IntPtr)ptrIn,
+                    allocation_size = (uint)input.Length,
+                    used_size = (uint)input.Length,
                 };
-
-                Buffer.MemoryCopy(ptrIn, ptrTmp, tmpBufferSize, tmpBufferSize);
-
-                uint frameSize = 0;
-                svt_jpeg_xs_image_config imageConfig = new svt_jpeg_xs_image_config();
-
-                var error = svt_jpeg_xs_decoder_get_single_frame_size(
-                    bitstream.buffer, tmpBufferSize, ref imageConfig, out frameSize, 1);
-
-                if (error != SvtJxsErrorType.SvtJxsErrorNone)
-                {
-                    return; // TODO: return error with details
-                }
-                if (frameSize == 0)
-                {
-                    return; // TODO: return error with details 
-                }
-
-                if(input.Length != frameSize)
-                {
-                    return; // TODO: return error with details 
-                }
-
-                bitstream.buffer = (IntPtr)ptrIn;
-                bitstream.allocation_size = frameSize;
-                bitstream.used_size = frameSize;
-
-                error = svt_jpeg_xs_decoder_init(
-                    SvtConst.MajorVersion, SvtConst.MinorVersion, ref decoder, bitstream.buffer, frameSize, ref imageConfig);
-
-                if (error != SvtJxsErrorType.SvtJxsErrorNone)
-                {
-                    return; // TODO: return error with details
-                }
-
-                if(imageConfig.components_num != 3)
-                {
-                    return; // TODO: return error with details
-                }
 
                 uint pixel_size = imageConfig.bit_depth <= 8 ? 1u : 2u;
 
@@ -137,7 +197,7 @@ namespace JpegXs.NET.Svt
                     image = imageBuffer
                 };
 
-                error = svt_jpeg_xs_decoder_send_frame(ref decoder, ref decInput, 1 /*blocking*/);
+                var error = svt_jpeg_xs_decoder_send_frame(ref this.decoder, ref decInput, 1 /*blocking*/);
 
                 if (error != SvtJxsErrorType.SvtJxsErrorNone)
                 {
@@ -145,7 +205,7 @@ namespace JpegXs.NET.Svt
                 }
 
                 svt_jpeg_xs_frame_t decOutput = new svt_jpeg_xs_frame_t();
-                error = svt_jpeg_xs_decoder_get_frame(ref decoder, ref decOutput, 1 /*blocking*/);
+                error = svt_jpeg_xs_decoder_get_frame(ref this.decoder, ref decOutput, 1 /*blocking*/);
 
                 if (error != SvtJxsErrorType.SvtJxsErrorNone)
                 {

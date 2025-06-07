@@ -248,6 +248,10 @@ namespace JpegXs.NET.Svt
     [StructLayout(LayoutKind.Sequential)]
     public struct svt_jpeg_xs_image_config
     {
+        public svt_jpeg_xs_image_config()
+        {
+        }
+
         const int MAX_COMPONENTS_NUM = 4;
 
         public uint width;
@@ -257,7 +261,7 @@ namespace JpegXs.NET.Svt
         public byte components_num;
 
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = MAX_COMPONENTS_NUM)]
-        public Component[] components;
+        public Component[] components = new Component[MAX_COMPONENTS_NUM];
     }
 
     [StructLayout(LayoutKind.Sequential)]
