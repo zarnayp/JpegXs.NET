@@ -3,8 +3,6 @@
 // See https://opensource.org/licenses/BSD-2-Clause for details.
 
 using System.Diagnostics;
-using System.Drawing;
-using System.Drawing.Imaging;
 using JpegXs.NET.Svt;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
@@ -12,7 +10,7 @@ namespace JpegXs.NET.Tests
 {
     public class SvtJpgEncoderDecoderTests
     {
-        private void GetComponentsFromFile(string filePath, int width, int height, out byte[] red, out byte[] green, out byte[] blue)
+        private static void GetComponentsFromFile(string filePath, int width, int height, out byte[] red, out byte[] green, out byte[] blue)
         {
             red = new byte[height * width];
             green = new byte[height * width];
@@ -31,6 +29,26 @@ namespace JpegXs.NET.Tests
                     blue[y * width + x] = rgb[it++];
                 }
             }
+        }
+
+        private static void SaveToFileFromComponents(string filePath, int width, int height, byte[] red, byte[] green, byte[] blue)
+        {
+            byte[] pixelData = new byte[width * height * 3];
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    int index = y * width + x;
+                    int pixelIndex = y * width * 3 + x * 3;
+
+                    pixelData[pixelIndex] = red[index];
+                    pixelData[pixelIndex + 1] = green[index];
+                    pixelData[pixelIndex + 2] = blue[index];
+                }
+            }
+
+            File.WriteAllBytes(filePath, pixelData);
         }
 
         [SetUp]
@@ -94,32 +112,7 @@ namespace JpegXs.NET.Tests
 
             Assert.IsTrue(result.Success);
 
-            Bitmap bitmap = new Bitmap(width, height, PixelFormat.Format24bppRgb);
-            BitmapData bitmapData = bitmap.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
-
-            int stride = bitmapData.Stride;
-            IntPtr ptr = bitmapData.Scan0;
-            byte[] pixelData = new byte[stride * height];
-
-            for (int y = 0; y < height; y++)
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    int index = y * width + x;
-                    int pixelIndex = y * stride + x * 3;
-
-                    pixelData[pixelIndex] = blueOut[index];
-                    pixelData[pixelIndex + 1] = greenOut[index];
-                    pixelData[pixelIndex + 2] =  redOut[index];
-                }
-            }
-
-            System.Runtime.InteropServices.Marshal.Copy(pixelData, 0, ptr, pixelData.Length);
-            bitmap.UnlockBits(bitmapData);
-
-            bitmap.Save("sampleTestOut.bmp", ImageFormat.Bmp);
-
-            Assert.Pass();
+            SaveToFileFromComponents("outRGB.bin", width, height, redOut, greenOut, blueOut);
         }
     }
 }
