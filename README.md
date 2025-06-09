@@ -17,5 +17,5 @@ JpegXS.Net serves as a .NET wrapper around the [SVT-JPEG-XS](https://github.com/
 
 ## Current Status
 
-?? **Under Development** ??  
+**?? **Under Development** ?? **
 JpegXS.Net is still a work in progress, with ongoing improvements to expand format support and enhance performance. Currently, only **RGB24 format** is supported for encoding and decoding. Future updates will introduce additional pixel formats, improved error handling, and broader compatibility.
