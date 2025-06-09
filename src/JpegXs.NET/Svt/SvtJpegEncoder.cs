@@ -15,7 +15,7 @@ namespace JpegXs.NET
 #if WINDOWS
         private const string DllName = "SvtJpegxs.dll";
 #else
-        private const string DllName = "SvtJpegxs.so";
+        private const string DllName = "libSvtJpegxs.so.0.10.0";
 #endif
 
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
